@@ -1,0 +1,32 @@
+[
+  {
+    "productos": {
+      "title": "ranch",
+      "codigo": "12345678",
+      "precio": 20,
+      "categoria": "despensa",
+      "cantidad": 5,
+      "id": 1
+    }
+  },
+  {
+    "productos": {
+      "title": "ranch",
+      "codigo": "12345678",
+      "precio": 20,
+      "categoria": "despensa",
+      "cantidad": 5,
+      "id": 2
+    }
+  },
+  {
+    "productos": {
+      "title": "ranch",
+      "codigo": "12345678",
+      "precio": 20,
+      "categoria": "despensa",
+      "cantidad": 5,
+      "id": 3
+    }
+  }
+]
