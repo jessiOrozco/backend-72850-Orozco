@@ -1,0 +1,22 @@
+[
+  {
+    "title": "jamon",
+    "code": "001",
+    "price": 200,
+    "stock": 10,
+    "category": "salchichoneria",
+    "description": "Jamon de pierna",
+    "status": true,
+    "id": 1
+  },
+  {
+    "title": "queso",
+    "code": "002",
+    "price": 230,
+    "stock": 10,
+    "category": "salchichoneria",
+    "description": "Queso oaxaca",
+    "status": true,
+    "id": 2
+  }
+]

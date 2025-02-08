@@ -2,73 +2,65 @@ const express = require("express")
 const router = express.Router()
 const fs = require("fs")
 
-const carritoPath = "./src/data/carrito.json"
-let carts = JSON.parse(fs.readFileSync(carritoPath))
+const cartsPath = "./src/data/carrito.json"
+let carts = cargaArchivo()
+
+function cargaArchivo(){
+  if(fs.existsSync(cartsPath)){
+    const carts = fs.readFileSync(cartsPath)
+    try {
+      return JSON.parse(carts)
+    }catch (e){
+      return []
+    }
+  }else {
+    return [];
+  }
+}
+
+router.get("/:cid", (req,res) => {
+  const {cid} = req.params;
+  cart = carts.find((cart) => cart.id.toString() === cid);
+  if(!cart){
+    return res.status(404).send("not found cart")
+  }
+  res.json(cart.products)
+})
+
 router.post("/:id/product/:pid", (req,res) => {
-
-  const body = req.body;
-  const lista = [
-    "Cantidad",
-  ]
-  const error = validateFieldsInBody(body,lista)
-  if (error){
-    return res.json(error)
-  }
-
-  const id = req.params.id;
-  const pid = req.params.pid;
-
-  if (!id || !pid){
-    return res.json({"error": "Faltan datos del producto"})
-  }
-
-  const cart = carts.find(item => item.id === id);
+  const {id,pid} = req.params;
+  const body = req.body
+  let cart = carts.find((cart)=> cart.id == id)
   if (!cart){
-    return res.json({"error": "Carrito no existe"})
+    return res.status(404).send("not found cart")
   }
 
   const productos = cart.products;
-  let product = productos.find(item => item.id === pid)
+  let product = productos.find(item => item.id === parseInt(pid))
   if (!product){
-    return res.json({"error": "Producto en el carrito inexistente"})
-  }
-
-  if (product.cantidad){
-    product.cantidad = product.cantidad + body.cantidad
-  }else {
-    product.cantidad = body.cantidad
-  }
-  prodcuts.forEach((item, i) => {
-    if (item.id === pid){
-      product[i] = product;
-      return
+    newProduct = {
+      "id": parseInt(pid),
+      "quantity":body.quantity
     }
-  })
-
-  cart.products = product
-  saveFile(carritoPath, carts)
+    productos.push(newProduct)
+  }else{
+      product.quantity = product.quantity + body.quantity
+  }
+  saveFile(cartsPath, carts)
   res.json({cart: cart})
-
 })
 
 router.post("/", (req, res) =>{
-  console.log(carts)
-  const body = req.body
-  const elementos = [
-    "productos"
-  ]
-
-  const error = validateFieldsInBody(body, elementos)
-  if (error){
-    res.json(error)
-    return
+  let body = req.body
+  if (!body.products){
+    body.products = []
   }
 
   const id = generarID()
-  body.productos.id = id
+  body.id = id
 
   carts.push(body)
-  saveFile(carritoPath,carts)
+  saveFile(cartsPath,carts)
   res.json({save:"ok", id:id})
 })
 
@@ -82,10 +74,8 @@ function generarID(){
   }
   let sortedCarts
   sortedCarts = carts.sort( a => {
-    console.log(a)
-
   })
-  return sortedCarts[sortedCarts.length -1].productos.id + 1
+  return sortedCarts[sortedCarts.length -1].id + 1
 }
 
 function validateFieldsInBody(body, lista){
