@@ -1,22 +1,38 @@
 [
   {
-    "title": "jamon",
-    "code": "001",
-    "price": 200,
-    "stock": 10,
-    "category": "salchichoneria",
-    "description": "Jamon de pierna",
+    "title": "queso liquido",
+    "code": "21",
+    "price": "30",
+    "stock": "50",
+    "category": "Salchichoneria",
     "status": true,
-    "id": 1
+    "id": 3
   },
   {
-    "title": "queso",
-    "code": "002",
-    "price": 230,
-    "stock": 10,
-    "category": "salchichoneria",
-    "description": "Queso oaxaca",
+    "title": "queso rayado",
+    "code": "22",
+    "price": "40",
+    "stock": "10",
+    "category": "Salchichoneria",
     "status": true,
-    "id": 2
+    "id": 3
+  },
+  {
+    "title": "queso oaxaca",
+    "code": "23",
+    "price": "41",
+    "stock": "20",
+    "category": "Salchichoneria",
+    "status": true,
+    "id": 3
+  },
+  {
+    "title": "queso panela",
+    "code": "23",
+    "price": "50",
+    "stock": "20",
+    "category": "Salchichoneria",
+    "status": true,
+    "id": 3
   }
 ]

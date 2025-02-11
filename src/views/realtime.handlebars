@@ -1,0 +1,73 @@
+<form method="POST">
+    <div class="control-group">
+        <label for="title" class="form-label">Nombre del producto</label>
+        <input class="form-control" type="text" name="title" id="title" placeholder="Nombre del producto" required>
+    </div>
+    <div class="control-group">
+        <label for="code" class="form-label">Codigo</label>
+        <input class="form-control" type="text" name="code" id="code" placeholder="Codigo" required>
+    </div>
+    <div class="control-group">
+        <label for="price" class="form-label">Precio</label>
+        <input class="form-control" type="text" name="price" id="price" placeholder="Precio" required>
+    </div>
+    <div class="control-group">
+        <label for="stock" class="form-label">Cantidad</label>
+        <input class="form-control" type="number" name="stock" id="stock" placeholder="Cantidad" required>
+    </div>
+    <div class="control-group">
+        <label for="category" class="form-label">Categoría</label>
+        <input class="form-control" type="text" name="category" id="category" placeholder="Nombre del producto" required>
+    </div>
+
+    <div>
+        <button type="submit" onclick="sendProduct(event)" class="btn btn-primary">Enviar</button>
+    </div>
+
+</form>
+
+<ul id="productsList" class="list-group">
+    {{#each products}}
+        <li class="list-group-item">
+            {{this.title}} - {{this.code}} - {{this.price}} - {{this.stock}} - {{this.category}}   <a href="#" onclick="deleteProduct({{this.id}})">X</a>
+        </li>
+    {{/each}}
+</ul>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+<script>
+    var socket = io('http://localhost:8081');
+    function deleteProduct(id){
+        socket.emit("delete-product", {id})
+    }
+    function sendProduct(e){
+        event.preventDefault()
+        var formData = {
+            title: document.getElementById('title').value,
+            code: document.getElementById('code').value,
+            price: document.getElementById('price').value,
+            stock: document.getElementById('stock').value,
+            category: document.getElementById('category').value
+        };
+        console.log(formData)
+
+        socket.emit("add-product", formData)
+
+    }
+    socket.on('get-product', (productList) => {
+        const productListContainer = document.getElementById('productsList');
+        console.log(productListContainer)
+        productListContainer.innerHTML = ''; // Limpiar la lista actual
+
+        productList.forEach(product => {
+            const productItem = document.createElement('li');
+            productItem.textContent = `${product.title} - ${product.code} - ${product.price} - ${product.stock} - ${product.category}` ;
+            const deleteLink = document.createElement('a');
+            deleteLink.href = "#";
+            deleteLink.textContent = " X";
+            deleteLink.onclick = () => deleteProduct(product.id);
+            productItem.appendChild(deleteLink);
+            productListContainer.appendChild(productItem);
+        });
+    })
+</script>
