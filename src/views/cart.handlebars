@@ -1,0 +1,24 @@
+<div class="container w-100">
+    <div class="row mt-5">
+        <h2 class="text-xl-center">Carrito</h2>
+    </div>
+    <div class="row">
+        {{#each data}}
+            <div class="card col-sm-4">
+
+                <img src="{{this.product.image}}" alt="" class="card-img-top">
+
+                <div class="card-footer d-flex flex-column  justify-content-end">
+                    <div class="d-flex justify-content-between">
+                        <h5>{{this.product.title}}</h5>
+                        <p class="align-self-end">${{this.product.price}} MXN</p>
+                        <p class="align-self-end">{{this.quantity}} Unidades</p>
+                    </div>
+                </div>
+            </div>
+
+
+        {{/each}}
+    </div>
+
+</div>

@@ -1,0 +1,54 @@
+<div class="container p-5 w-100">
+    <div class="card mb-3" >
+        <div class="row">
+            <div class="col-md-6">
+                <img src="{{data.image}}" class="card-img" alt="...">
+            </div>
+
+            <div class="col-6">
+                <div class="card-body">
+                    <h5 class="text-xl-center">{{data.title}}</h5>
+                    <p class="card-text">{{data.category}}.</p>
+                    <p class="card-text">#{{data.code}}.</p>
+                    <p class="card-text">${{data.price}}.</p>
+                    <p class="card-text">{{data.stock}} Unidades.</p>
+                    <div class=" d-flex justify-content-end">
+                        <div class="mt-5">
+                            <button class="btn btn-primary" onclick="addProduct()">Add</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function addProduct() {
+        const productId = window.location.href.split("/")[window.location.href.split("/").length - 1]
+
+        fetch(`http://localhost:8080/api/carts/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                products: [{
+                    product: productId,
+                    quantity: 1
+                }]
+            })
+        }).then(async (response) => {
+            const responseCart = await response.json()
+            if (!responseCart.id) {
+                console.log("No se pudo crear el carrito")
+            }
+            const idCart = responseCart.id;
+            window.location.href = "/carts/" + idCart
+        })
+
+
+    }
+
+</script>

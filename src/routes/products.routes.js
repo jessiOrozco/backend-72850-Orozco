@@ -1,134 +1,98 @@
 const express = require('express')
 const router = express.Router()
 const fs = require('fs')
+const productService = require("../public/product.service");
+const {Product} = require("../model/productModel");
 
 const productsPath = "./src/data/products.json"
-let products = JSON.parse(fs.readFileSync(productsPath))
+let products = []
 
 
-router.get("/",(req,res) => {
-  const limit = req.query.limit ? req.query.limit : products.length
-  const limitedArray = products.slice(0,limit)
-  if(!limitedArray){
-    res.status(404).json({"error": "No se encontro producto"})
-  }
-  res.json(limitedArray)
+router.get("/",async (req,res) => {
+  const limit = req.query.limit  ? req.query.limit : 10
+  const page = req.query.page ? req.query.page : 1
+  const query = req.query.query ? req.query.query : ""
+  const sort =  req.query.sort ? req.query.sort : {}
+  const productLimit = await productService.getProductsWithParameters(limit, page, query, sort)
+  res.json(productLimit)
 
 })
 
-router.get("/:product", (req,res) => {
-  const productID = req.params.product
-  productsfilter = products.find(item => item.id == productID)
-  if (!productsfilter){
-    res.status(404).json({"Error": "Producto no encontrado"})
+router.get("/:pid", async (req,res) => {
+  const pid = req.params.pid
+  const product = await productService.getProductsById(pid)
+
+  if (!product){
+    return res.json({"error": "producto_no_encontrado"})
   }
-  res.json(products.find(item => item.id == productID))
+
+  res.json({product})
 })
 
-router.post("/", (req,res) => {
+router.post("/", async (req,res) => {
   const body = req.body
-  const elementos = [
+  const  listField = [
     "title",
-    "description",
     "code",
     "price",
     "stock",
-    "category",
+    "category"
   ]
-  const error = validateFieldsInBody(body, elementos)
-  if (error){
-    res.status(400).json(error)
-  }
-
-  if (!body.status){
-    body.status = true
-  }
-  const id = generarID()
-  body.id = id
-
-  products.push(body)
-
-  saveFile(productsPath, products)
-
-  res.json({status: "OK", id:id})
-})
-
-router.put("/:producto", (req, res) => {
-  const productId = req.params.producto;
-  const body = req.body;
-  if (!productId){
-    res.status(404).json({"error":"el producto es necesario para actualizar" })
-  }
-
-  const elementos = [
-    "title",
-    'code',
-    'price',
-    'stock',
-    'category',
-    'description',
-  ]
-
-  const error = validateFieldsInBody(body, elementos)
-
-  if(error){
-    res.status(400).json(error)
+  const error = validateFieldsInBody(body,listField)
+  if (error) {
+    res.json(error)
     return
   }
+  await productService.addProduct(body)
+  res.json({save: "OK"})
+})
 
+router.put("/:pid", async (req, res) => {
+  const pid = req.params.pid
+  const body = req.body
+  if (!pid){
+    res.json({"error":"id necesario para actualizar"})
+  }
+  const  listField = [
+    "title",
+    "code",
+    "price",
+    "stock",
+    "category"
+  ]
+  const error = validateFieldsInBody(body,listField)
+  if (error) {
+    res.json(error)
+    return
+  }
   if (!body.status){
     body.status = true
   }
 
-  let producto = products.find(item => item.id == productId)
-  if (!producto){
-    res.json({"error": "Producto inexistente"})
+  let product = productService.getProductsById(pid)
+  if (!product){
+    res.json({"error":"producto inexistente"})
     return;
   }
 
-  producto = body
-  producto.id = parseInt(productId)
-  products.forEach((item, i) => {
-    if (item.id == productId){
-      products[i] = producto
-      return
-    }
-  })
-  saveFile(productsPath, products)
-  res.json({"update": "Ok"})
+  await Product.updateOne({_id: pid}, body).exec()
+  res.json({"update":"OK"})
 })
 
 
-router.delete("/:id", (req,res) => {
-  const id = req.params.id
-  if (!id){
-    res.json({"error": "El Id del producto es necesario"})
+router.delete("/:pid", (req,res) => {
+  const pid = req.params.pid
+
+  if (!pid){
+    res.json({"error":"id necesario para actualizar"})
   }
-
-  const producto = products.find(item => item.id == id)
-
-  if (!producto){
-    res.status(404).json({"error": "No existe el producto"})
+  const product = productService.deleteProduct(pid)
+  if (!product){
+    res.json({"error":"producto inexistente"})
+    return;
   }
-
-  products = products.filter(item => item.id != id)
-  saveFile(productsPath, products)
-  res.json({"delete":"OK", producto: producto})
+  res.json({"delete":"OK", producto: product})
 })
-
-
-function saveFile(path, products){
-  fs.writeFileSync(path, JSON.stringify(products, null, 2))
-}
-
-function generarID(){
-  const sortProducts = products.sort((a,b) => b.id - a.id)
-  if (!sortProducts[0]){
-    return 1
-  }
-
-  return sortProducts[0].id + 1
-}
 
 function validateFieldsInBody(body, elements){
   let error;

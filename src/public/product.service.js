@@ -1,64 +1,87 @@
 const fs = require("fs")
 const pathProduct = "./src/data/products.json"
 
-let products = JSON.parse(fs.readFileSync(pathProduct)) || [];
+const {Product} = require("../model/productModel")
+const mongoose = require("mongoose");
 
-function initProducts(){
-    let productAux = JSON.parse(fs.readFileSync(pathProduct));
-    if(!productAux){
-        products = []
-        return;
+async function getProductsWithParameters(limit, page, query,sort){
+
+    const response ={
+        status: "success",
+        payload: [],
+        totalPages : 0,
+        prevPage : 0,
+        nextPage : 0,
+        hasPrevPage : false,
+        hasNextPage : false,
+        prevLink : null,
+        nextLink : null
     }
-    products = productAux
-}
 
-function getProducts(limit){
-    if(!limit){
-        return products
+    try {
+        if (sort){
+            if (sort === "asc"){
+                sort ={price: 1}
+            }
+            if(sort === "desc"){
+                sort = {price: -1}
+            }
+        }
+        const filter = query ? {"category": query} : {}
+
+        const totalProducts = await Product.countDocuments()
+        const totalPages = Math.ceil(totalProducts / limit)
+        const numberPage = parseInt(page);
+        response.totalPages = totalPages
+        const prevPage = numberPage > 1 && totalPages !== 0 ? numberPage - 1 : null
+        const nextPage = numberPage < response.totalPages ? numberPage + 1 : null
+        response.prevPage = prevPage
+        response.nextPage = nextPage
+        response.hasPrevPage = !!prevPage
+        response.hasNextPage = !!nextPage
+        response.prevLink = prevPage ? `http://localhost:8080/api/products?limit=${limit}&page=${prevPage}` : null
+        response.nextLink = nextPage ? `http://localhost:8080/api/products?limit=${limit}&page=${nextPage}` : null
+        response.payload = await Product.find(filter).lean().limit(limit).skip((page - 1) * limit).sort(sort).exec()
+        return response;
+    }catch (error) {
+        console.log(error)
+        response.status = "error";
+        return response
     }
-    return products.slice(0,limit);
-}
 
-function getProductById(id){
-    return products.find(product => product.id === id)
-}
 
-function addProduct(product){
-    if(!product.status){
-        product.status = true;
+
+}
+async function getProducts(limit){
+
+    products = await Product.find({}).lean().limit(limit).exec()
+    return products;
+}
+async function getProductsById(id){
+    return await Product.findById(new mongoose.Types.ObjectId(id)).lean().exec();
+}
+async function addProduct(data){
+    if (!data.status){
+        data.status = true
     }
-    const id = generatedId()
-    product.id = id
-    products.push(product)
-    saveProduct(pathProduct, products)
-    return id;
+
+    const product = new Product(data)
+
+    return await product.save();
+
 }
 
-function saveProduct(path, products){
-    fs.writeFileSync(path, JSON.stringify(products, null, 2));
-}
 
-function generatedId(){
-    const sortedProducts = products.sort((a,b) => a.id - b.id)
-    if(!sortedProducts[0]){
-        return 1
-    }
-    return sortedProducts[0].id + 1
-}
 
-function deletedProduct(id){
-    const product = products.find(product => product.id === id)
-    if(!product ){
-        return null;
-    }
-    products = products.filter(product => product.id !== id)
-    saveProduct(pathProduct, products)
-    return product
-}
 
+async function deleteProduct(id){
+    return await Product.deleteOne({_id: id}).lean().exec()
+
+}
 module.exports = {
-    deletedProduct,
-    addProduct,
     getProducts,
-    getProductById,
+    getProductsById,
+    addProduct,
+    deleteProduct,
+    getProductsWithParameters
 }

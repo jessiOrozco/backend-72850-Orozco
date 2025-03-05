@@ -1,62 +1,81 @@
-<form method="POST">
-    <div class="control-group">
-        <label for="title" class="form-label">Nombre del producto</label>
-        <input class="form-control" type="text" name="title" id="title" placeholder="Nombre del producto" required>
-    </div>
-    <div class="control-group">
-        <label for="code" class="form-label">Codigo</label>
-        <input class="form-control" type="text" name="code" id="code" placeholder="Codigo" required>
-    </div>
-    <div class="control-group">
-        <label for="price" class="form-label">Precio</label>
-        <input class="form-control" type="text" name="price" id="price" placeholder="Precio" required>
-    </div>
-    <div class="control-group">
-        <label for="stock" class="form-label">Cantidad</label>
-        <input class="form-control" type="number" name="stock" id="stock" placeholder="Cantidad" required>
-    </div>
-    <div class="control-group">
-        <label for="category" class="form-label">Categoría</label>
-        <input class="form-control" type="text" name="category" id="category" placeholder="Nombre del producto" required>
-    </div>
+<div class="container w-100 mt-5">
+    <form method="POST" class="d-flex flex-column w-100 align-items-center justify-content-center">
+        <div class="control-group col-6">
+            <label for="title" class="form-label">Title</label>
+            <input class="form-control" type="text" name="title" id="title" placeholder="Title" required>
+        </div>
+        <div class="control-group col-6">
+            <label for="code" class="form-label">Code</label>
+            <input class="form-control" type="text" name="code" id="code" placeholder="Code" required>
+        </div>
+        <div class="control-group col-6">
+            <label for="price" class="form-label">Price</label>
+            <input class="form-control" type="number" name="price" id="price" placeholder="Price" required>
+        </div>
+        <div class="control-group col-6">
+            <label for="stock" class="form-label">Stock</label>
+            <input class="form-control" type="number" name="stock" id="stock" placeholder="Stock" required>
+        </div>
+        <div class="control-group col-6">
+            <label for="category" class="form-label">Category</label>
+            <input class="form-control" type="text" name="category" id="category" placeholder="Category" required>
+        </div>
 
-    <div>
-        <button type="submit" onclick="sendProduct(event)" class="btn btn-primary">Enviar</button>
-    </div>
+        <div class="control-group col-6">
+            <label for="image" class="form-label">Url Image</label>
+            <input class="form-control" type="text" name="image" id="image" placeholder="Url Image" required>
+        </div>
 
-</form>
+        <div>
+            <button type="submit" onclick="sendProduct(event)" class="btn btn-primary">Create</button>
+            <button type="button" onclick="location.href='/'" class="btn btn-link">Return</button>
 
-<ul id="productsList" class="list-group">
+        </div>
+
+
+    </form>
+
+</div>
+
+
+<ul id="product_list" class="list-group d-flex flex-column w-100 align-items-center justify-content-center">
     {{#each products}}
-        <li class="list-group-item">
-            {{this.title}} - {{this.code}} - {{this.price}} - {{this.stock}} - {{this.category}}   <a href="#" onclick="deleteProduct({{this.id}})">X</a>
+        <li class="list-group-item col-6">
+            {{this.title}} - {{this.code}} - {{this.price}} - {{this.stock}} - {{this.category}}   <a href="#" onclick="deleteProduct('{{this._id}}')">X</a>
         </li>
     {{/each}}
 </ul>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    var socket = io('http://localhost:8081');
+    var socket = io("http://localhost:8081/");
+    var sweetAlert = Swal
     function deleteProduct(id){
         socket.emit("delete-product", {id})
+
+
     }
     function sendProduct(e){
+
         event.preventDefault()
         var formData = {
             title: document.getElementById('title').value,
             code: document.getElementById('code').value,
             price: document.getElementById('price').value,
             stock: document.getElementById('stock').value,
-            category: document.getElementById('category').value
+            category: document.getElementById('category').value,
+            image: document.getElementById('image').value,
         };
         console.log(formData)
 
         socket.emit("add-product", formData)
 
     }
+
     socket.on('get-product', (productList) => {
-        const productListContainer = document.getElementById('productsList');
-        console.log(productListContainer)
+        const productListContainer = document.getElementById('product_list');
+        console.log(productList)
         productListContainer.innerHTML = ''; // Limpiar la lista actual
 
         productList.forEach(product => {
@@ -69,5 +88,16 @@
             productItem.appendChild(deleteLink);
             productListContainer.appendChild(productItem);
         });
+
     })
+
+    socket.on("error-add-product", (err) =>{
+        sweetAlert.fire({
+            title: 'Error!',
+            text: err.error,
+            icon: 'error',
+            confirmButtonText: 'Cool'
+        })
+    })
+
 </script>

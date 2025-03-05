@@ -1,93 +1,219 @@
 const express = require("express")
 const router = express.Router()
-const fs = require("fs")
+const fs = require('fs');
+const {Cart} = require("../model/cartModel")
+const mongoose = require("mongoose");
 
-const cartsPath = "./src/data/carrito.json"
-let carts = cargaArchivo()
 
-function cargaArchivo(){
-  if(fs.existsSync(cartsPath)){
-    const carts = fs.readFileSync(cartsPath)
-    try {
-      return JSON.parse(carts)
-    }catch (e){
-      return []
-    }
-  }else {
-    return [];
-  }
-}
+router.put("/:cid/products/:pid", async (req, res) => {
 
-router.get("/:cid", (req,res) => {
-  const {cid} = req.params;
-  cart = carts.find((cart) => cart.id.toString() === cid);
-  if(!cart){
-    return res.status(404).send("not found cart")
-  }
-  res.json(cart.products)
-})
-
-router.post("/:id/product/:pid", (req,res) => {
-  const {id,pid} = req.params;
   const body = req.body
-  let cart = carts.find((cart)=> cart.id == id)
-  if (!cart){
-    return res.status(404).send("not found cart")
+  const listField = [
+    "quantity",
+  ]
+  const error = validateFieldsInBody(body, listField)
+  if (error) {
+    res.json(error)
+    return
   }
 
-  const productos = cart.products;
-  let product = productos.find(item => item.id === parseInt(pid))
-  if (!product){
-    newProduct = {
-      "id": parseInt(pid),
-      "quantity":body.quantity
-    }
-    productos.push(newProduct)
-  }else{
-      product.quantity = product.quantity + body.quantity
+  if (body.quantity === 0) {
+    return res.json({"error": "La cantidad debe ser mayor a 0"})
   }
-  saveFile(cartsPath, carts)
-  res.json({cart: cart})
-})
-
-router.post("/", (req, res) =>{
-  let body = req.body
-  if (!body.products){
-    body.products = []
+  const cid = req.params.cid
+  const pid = req.params.pid
+  if (!cid || !pid) {
+    return res.json({"error": "Faltan datos para reconocer el producto"})
   }
-
-  const id = generarID()
-  body.id = id
-
-  carts.push(body)
-  saveFile(cartsPath,carts)
-  res.json({save:"ok", id:id})
-})
-
-function saveFile(path, carts){
-  fs.writeFileSync(path, JSON.stringify(carts, null, 2))
-}
-
-function generarID(){
-  if (carts.length === 0){
-    return 1
+  const idCard = parseInt(cid)
+  const cart = await getCartById(cid)
+  if (!cart) {
+    return res.json({"error": "Carrito no existe"})
   }
-  let sortedCarts
-  sortedCarts = carts.sort( a => {
+  const productos = cart.products
+  if (productos.length === 0) {
+    return res.json({"error": "El carrito esta vacio"})
+  }
+  let indexProduct = productos.findIndex(item => {
+    return item.product.toString() == pid
   })
-  return sortedCarts[sortedCarts.length -1].id + 1
+  if (indexProduct === -1) {
+    return res.json({"error": "Producto en el carrito no existe"})
+  }
+  const product = productos[indexProduct]
+  product.quantity = product.quantity ? product.quantity + body.quantity : body.quantity
+
+
+  cart.products[indexProduct] = product
+  try {
+    await Cart.updateOne({id: idCard}, cart)
+    return res.json({cart: cart})
+  } catch (error) {
+    console.log(error)
+    return res.json({"error": "Error al actualizar el carrito"})
+  }
+
+
+})
+router.get("/:cid", async (req, res) => {
+
+  const cid = req.params.cid
+  const cart = await Cart.findOne({id: cid}).populate('products.product').lean().exec()
+  if (!cart) {
+    return res.json({"error": "Carrito no encontrado"})
+  }
+
+  res.render("cart", {data: cart})
+})
+
+router.post("/", async (req, res) => {
+  const body = req.body
+  const listField = []
+  const error = validateFieldsInBody(body, listField)
+  if (error) {
+    res.json(error)
+    return
+  }
+  try {
+    const id = await generateId()
+    body.id = id
+    const cart = new Cart(body)
+    await cart.save()
+
+    return res.json({save: "OK", id: id})
+  } catch (error) {
+    console.log(error)
+    return res.json({"error": "Error al crear el carrito"})
+  }
+
+})
+
+
+router.delete("/:cid/products/:pid", async (req, res) => {
+  const cid = req.params.cid
+  const pid = req.params.pid
+  if (!cid || !pid) {
+    return res.json({"error": "Faltan datos para reconocer el producto"})
+  }
+  const cart = await getCartById(cid)
+  if (!cart) {
+    return res.json({"error": "Carrito no existe"})
+  }
+  const productos = cart.products
+  let productIndex = productos.findIndex(item => {
+    return item.product.toString() == pid
+  })
+  if (productIndex === -1) {
+    return res.json({"error": "Producto en el carrito no existe"})
+  }
+  //productos = productos.filter(item => item.id != pid)
+  cart.products.splice(productIndex, 1)
+
+  try {
+    await Cart.updateOne({id: cid}, cart)
+    return res.json({cart: cart})
+  } catch (error) {
+    console.log(error)
+    return res.json({"error": "Error al eliminar el producto del carrito"})
+  }
+})
+
+router.put("/:cid", async (req, res) => {
+  const cid = req.params.cid
+  if (!cid) {
+    return res.json({"error": "Faltan datos para reconocer el carrito"})
+  }
+  const body = req.body
+  const listField = [
+    "products",
+  ]
+  const error = validateFieldsInBody(body, listField)
+  if (error) {
+    res.json(error)
+    return
+  }
+  const productToAdd = body.products;
+  if (productToAdd.length === 0) {
+    return res.json({"error": "Productos no puede ser vacio"})
+  }
+  const cart = await getCartById(cid)
+  if (!cart) {
+    return res.json({"error": "Carrito no existe"})
+  }
+  cart.products = getProductsToAdd(cart.products, productToAdd)
+
+
+  try {
+    await Cart.updateOne({id: cid}, cart)
+    return res.json({cart: cart})
+  } catch (error) {
+    console.log(error)
+    return res.json({"error": "Error al eliminar el producto del carrito"})
+  }
+})
+
+router.delete("/:cid", async (req, res) => {
+  const cid = req.params.cid
+  if (!cid) {
+    return res.json({"error": "Faltan datos para reconocer el carrito"})
+  }
+
+  const cart = await getCartById(cid)
+  if (!cart) {
+    return res.json({"error": "Carrito no existe"})
+  }
+  cart.products = []
+
+  try {
+    await Cart.updateOne({id: cid}, cart)
+    return res.json({cart: cart})
+  } catch (error) {
+    console.log(error)
+    return res.json({"error": "Error al eliminar el producto del carrito"})
+  }
+})
+
+
+
+function getProductsToAdd(productsCart, productsToAdd) {
+  let products = []
+  productsToAdd.forEach(item => products.push(
+      {
+        product: new mongoose.Types.ObjectId(item.product),
+        quantity: item.quantity
+      }
+  ))
+  return products;
 }
 
-function validateFieldsInBody(body, lista){
+async function getCartById(id) {
+
+  return await Cart.findOne({id: parseInt(id)}).exec();
+}
+
+
+async function generateId() {
+  const lastCart = await Cart.find({}).sort({id: -1}).exec()
+  if (lastCart.length === 0) {
+    return 1;
+  }
+  return lastCart[0].id + 1
+}
+
+function validateFieldsInBody(body, listFields) {
+
   let error;
-  lista.forEach(element => {
-    if(!(element in body ) || body[element]===""){
-      error = {"error": `Falta el campo o no debe ser vacio ${element}`}
-      return
-    }
-  })
+  listFields.forEach(element => {
 
+    if (!(element in body) || body[element] == "") {
+
+      error = {"error": `Falta el campo o no debe ser vacio ${element}`}
+      return;
+    }
+
+  });
   return error;
 }
+
 
 module.exports = router
