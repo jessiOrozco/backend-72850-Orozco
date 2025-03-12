@@ -1,108 +1,114 @@
-const express = require('express')
-const router = express.Router()
-const fs = require('fs')
-const productService = require("../public/product.service");
-const {Product} = require("../model/productModel");
+import express from "express";
+import ProductManager from "../managers/product-manager.js";
 
-const productsPath = "./src/data/products.json"
-let products = []
+const router = express.Router();
+const productManager = new ProductManager();
 
 
-router.get("/",async (req,res) => {
-  const limit = req.query.limit  ? req.query.limit : 10
-  const page = req.query.page ? req.query.page : 1
-  const query = req.query.query ? req.query.query : ""
-  const sort =  req.query.sort ? req.query.sort : {}
-  const productLimit = await productService.getProductsWithParameters(limit, page, query, sort)
-  res.json(productLimit)
+router.get("/", async (req, res) => {
+  try {
+    const { limit = 10, page = 1, sort, query } = req.query;
 
-})
+    const products = await productManager.getProducts({
+      limit: parseInt(limit),
+      page: parseInt(page),
+      sort,
+      query,
+    });
 
-router.get("/:pid", async (req,res) => {
-  const pid = req.params.pid
-  const product = await productService.getProductsById(pid)
+    res.json({
+      status: 'success',
+      payload: products,
+      totalPages: products.totalPages,
+      prevPage: products.prevPage,
+      nextPage: products.nextPage,
+      page: products.page,
+      hasPrevPage: products.hasPrevPage,
+      hasNextPage: products.hasNextPage,
+      prevLink: products.hasPrevPage ? `/api/products?limit=${limit}&page=${products.prevPage}&sort=${sort}&query=${query}` : null,
+      nextLink: products.hasNextPage ? `/api/products?limit=${limit}&page=${products.nextPage}&sort=${sort}&query=${query}` : null,
+    });
 
-  if (!product){
-    return res.json({"error": "producto_no_encontrado"})
+  } catch (error) {
+    console.error("Error al obtener productos", error);
+    res.status(500).json({
+      status: 'error',
+      error: "Error interno del servidor"
+    });
   }
+});
 
-  res.json({product})
-})
+// 2) Traer solo un producto por id:
+router.get("/:pid", async (req, res) => {
+  const id = req.params.pid;
 
-router.post("/", async (req,res) => {
-  const body = req.body
-  const  listField = [
-    "title",
-    "code",
-    "price",
-    "stock",
-    "category"
-  ]
-  const error = validateFieldsInBody(body,listField)
-  if (error) {
-    res.json(error)
-    return
-  }
-  await productService.addProduct(body)
-  res.json({save: "OK"})
-})
-
-router.put("/:pid", async (req, res) => {
-  const pid = req.params.pid
-  const body = req.body
-  if (!pid){
-    res.json({"error":"id necesario para actualizar"})
-  }
-  const  listField = [
-    "title",
-    "code",
-    "price",
-    "stock",
-    "category"
-  ]
-  const error = validateFieldsInBody(body,listField)
-  if (error) {
-    res.json(error)
-    return
-  }
-  if (!body.status){
-    body.status = true
-  }
-
-  let product = productService.getProductsById(pid)
-  if (!product){
-    res.json({"error":"producto inexistente"})
-    return;
-  }
-
-  await Product.updateOne({_id: pid}, body).exec()
-  res.json({"update":"OK"})
-})
-
-
-router.delete("/:pid", (req,res) => {
-  const pid = req.params.pid
-
-  if (!pid){
-    res.json({"error":"id necesario para actualizar"})
-  }
-  const product = productService.deleteProduct(pid)
-  if (!product){
-    res.json({"error":"producto inexistente"})
-    return;
-  }
-  res.json({"delete":"OK", producto: product})
-})
-
-function validateFieldsInBody(body, elements){
-  let error;
-  elements.forEach(element => {
-    if (!(element in body) || body[element] ===""){
-      error = {"error": `Falta el campo o no debe ser vacio ${element}`}
-      return error
+  try {
+    const producto = await productManager.getProductById(id);
+    if (!producto) {
+      return res.json({
+        error: "Producto no encontrado"
+      });
     }
-  });
-  return error;
-}
 
-module.exports = router
+    res.json(producto);
+  } catch (error) {
+    console.error("Error al obtener producto", error);
+    res.status(500).json({
+      error: "Error interno del servidor"
+    });
+  }
+});
+
+// 3) Agregar nuevo producto:
+router.post("/", async (req, res) => {
+  const nuevoProducto = req.body;
+
+  try {
+    await productManager.addProduct(nuevoProducto);
+    res.status(201).json({
+      message: "Producto agregado exitosamente"
+    });
+  } catch (error) {
+    console.error("Error al agregar producto", error);
+    res.status(500).json({
+      error: "Error interno del servidor"
+    });
+  }
+});
+
+// 4) Actualizar por ID
+router.put("/:pid", async (req, res) => {
+  const id = req.params.pid;
+  const productoActualizado = req.body;
+
+  try {
+    await productManager.updateProduct(id, productoActualizado);
+    res.json({
+      message: "Producto actualizado exitosamente"
+    });
+  } catch (error) {
+    console.error("Error al actualizar producto", error);
+    res.status(500).json({
+      error: "Error interno del servidor"
+    });
+  }
+});
+
+
+router.delete("/:pid", async (req, res) => {
+  const id = req.params.pid;
+
+  try {
+    await productManager.deleteProduct(id);
+    res.json({
+      message: "Producto eliminado exitosamente"
+    });
+  } catch (error) {
+    console.error("Error al eliminar producto", error);
+    res.status(500).json({
+      error: "Error interno del servidor"
+    });
+  }
+});
+
+export default router;

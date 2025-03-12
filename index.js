@@ -41,7 +41,6 @@ router.get("/", async (req, res) => {
 })
 
 router.get("/products/:pid", async (req,res) =>{
-
     const pid = req.params.pid.trim();
     if (!pid || !mongoose.Types.ObjectId.isValid(pid)) {
         return res.json({"error": "producto_no_encontrado"})
@@ -53,7 +52,6 @@ router.get("/products/:pid", async (req,res) =>{
 router.get("/carts/:pid", async (req,res) =>{
 
     const pid = req.params.pid.trim();
-    console.log(pid)
     if(!pid) {
         return res.json({"error": "Carrito no encontrado"})
 

@@ -22,13 +22,18 @@
         </div>
 
         <div class="control-group col-6">
+            <label for="description" class="form-label">Description</label>
+            <input class="form-control" type="text" name="description" id="description" placeholder="Description" required>
+        </div>
+
+        <div class="control-group col-6">
             <label for="image" class="form-label">Url Image</label>
             <input class="form-control" type="text" name="image" id="image" placeholder="Url Image" required>
         </div>
 
         <div>
             <button type="submit" onclick="sendProduct(event)" class="btn btn-primary">Create</button>
-            <button type="button" onclick="location.href='/'" class="btn btn-link">Return</button>
+            <button type="button" onclick="location.href='/products'" class="btn btn-link">Return</button>
 
         </div>
 
@@ -39,9 +44,10 @@
 
 
 <ul id="product_list" class="list-group d-flex flex-column w-100 align-items-center justify-content-center">
+
     {{#each products}}
         <li class="list-group-item col-6">
-            {{this.title}} - {{this.code}} - {{this.price}} - {{this.stock}} - {{this.category}}   <a href="#" onclick="deleteProduct('{{this._id}}')">X</a>
+            {{title}} - {{code}} - {{price}} - {{stock}} - {{category}}   <a href="#" onclick="deleteProduct('{{this._id}}')">X</a>
         </li>
     {{/each}}
 </ul>
@@ -65,9 +71,9 @@
             price: document.getElementById('price').value,
             stock: document.getElementById('stock').value,
             category: document.getElementById('category').value,
+            description: document.getElementById('description').value,
             image: document.getElementById('image').value,
         };
-        console.log(formData)
 
         socket.emit("add-product", formData)
 
@@ -75,10 +81,10 @@
 
     socket.on('get-product', (productList) => {
         const productListContainer = document.getElementById('product_list');
-        console.log(productList)
+
         productListContainer.innerHTML = ''; // Limpiar la lista actual
 
-        productList.forEach(product => {
+        productList.docs.forEach(product => {
             const productItem = document.createElement('li');
             productItem.textContent = `${product.title} - ${product.code} - ${product.price} - ${product.stock} - ${product.category}` ;
             const deleteLink = document.createElement('a');

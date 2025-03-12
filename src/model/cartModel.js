@@ -1,18 +1,27 @@
-const {Schema, model ,ObjectId} = require("mongoose")
-const {productSchema} = require("./productModel")
-const cartSchema = new Schema({
-    products:[
-        {
-            product:{
-                type: ObjectId,
-                ref: "Product",
-                _id: false
-            },
-            quantity: Number
-        }
-    ],
-    id: Number
-}, {versionKey: false})
-const Cart =model("Cart", cartSchema, "carritos");
+import mongoose from "mongoose";
 
-module.exports = {Cart}
+const cartSchema = new mongoose.Schema({
+    products: [
+        {
+            product: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'productos',
+                required: true
+            },
+            quantity: {
+                type: Number,
+                required: true
+            }
+        }
+    ]
+});
+
+// Middleware pre que realiza la población automáticamente
+ cartSchema.pre('findOne', function (next) {
+      this.populate('products.product', '_id title price');
+      next();
+ });
+
+const CartModel = mongoose.model("carritos", cartSchema);
+
+export default CartModel;

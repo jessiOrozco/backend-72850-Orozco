@@ -2,16 +2,16 @@
     <div class="card mb-3" >
         <div class="row">
             <div class="col-md-6">
-                <img src="{{data.image}}" class="card-img" alt="...">
+                <img src="{{product.image}}" class="card-img" alt="...">
             </div>
 
             <div class="col-6">
                 <div class="card-body">
-                    <h5 class="text-xl-center">{{data.title}}</h5>
-                    <p class="card-text">{{data.category}}.</p>
-                    <p class="card-text">#{{data.code}}.</p>
-                    <p class="card-text">${{data.price}}.</p>
-                    <p class="card-text">{{data.stock}} Unidades.</p>
+                    <h5 class="text-xl-center">{{product.title}}</h5>
+                    <p class="card-text">{{product.category}}.</p>
+                    <p class="card-text">#{{product.code}}.</p>
+                    <p class="card-text">${{product.price}}.</p>
+                    <p class="card-text">{{product.stock}} Unidades.</p>
                     <div class=" d-flex justify-content-end">
                         <div class="mt-5">
                             <button class="btn btn-primary" onclick="addProduct()">Add</button>
@@ -25,30 +25,41 @@
 </div>
 
 <script>
-    function addProduct() {
-        const productId = window.location.href.split("/")[window.location.href.split("/").length - 1]
+    async function addProduct() {
 
-        fetch(`http://localhost:8080/api/carts/`, {
+        const productId = window.location.href.split("/")[window.location.href.split("/").length - 1]
+        if (localStorage.length === 0 || localStorage.getItem("cart") === "undefined") {
+          await fetch(`http://localhost:8080/api/carts/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+            }).then(async (response) => {
+
+                const responseCart = await response.json()
+                if (!responseCart._id) {
+                    console.log("No se pudo crear el carrito")
+                }
+                const idCart = responseCart._id;
+                localStorage.setItem("cart", idCart);
+            }).catch((err) => {
+                console.log(err)
+                alert("Error No se puede crear el carrito");
+                window.location.href = `#`;
+            })
+        }
+
+        let idCart = localStorage.getItem("cart");
+        await fetch(`http://localhost:8080/api/carts/${idCart}/product/${productId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                products: [{
-                    product: productId,
-                    quantity: 1
-                }]
-            })
+            }
         }).then(async (response) => {
             const responseCart = await response.json()
-            if (!responseCart.id) {
-                console.log("No se pudo crear el carrito")
-            }
-            const idCart = responseCart.id;
+
             window.location.href = "/carts/" + idCart
         })
-
-
     }
 
 </script>
